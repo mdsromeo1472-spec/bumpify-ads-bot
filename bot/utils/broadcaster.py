@@ -70,7 +70,7 @@ async def _send_ad_via_pyrogram(client: Client, chat_id, ad_data: dict):
         await client.send_message(chat_id, text, parse_mode=ParseMode.HTML)
 
     elif msg_type == "forward":
-        msgs = [m async for m in client.get_chat_history("me", limit=1)]
+        msgs = [m async for m in client.get_chat_history("self", limit=1)]
         if msgs and msgs[0].id:
             await client.forward_messages(chat_id, "me", msgs[0].id)
         else:
@@ -189,7 +189,7 @@ async def _process_account(owner_id: int, acc_num: int, acc: dict) -> dict:
         try:
             client = await get_pyrogram_client(acc["session"])
             async with client:
-                msgs = [m async for m in client.get_chat_history("me", limit=1)]
+                msgs = [m async for m in client.get_chat_history("self", limit=1)]
                 if not msgs or not msgs[0].id:
                     report["error"] = "Ad message set kro"
                     await send_logs(
@@ -226,7 +226,12 @@ async def _process_account(owner_id: int, acc_num: int, acc: dict) -> dict:
                         gid_for_log = chat_id if isinstance(chat_id, int) else 0
 
                         try:
-                            await forward_saved_to_topic(client, chat_id, saved_msg_id, topic_id)
+                            await client.copy_message(
+    chat_id=chat_id,
+    from_chat_id="self",
+    message_id=saved_msg_id,
+    message_thread_id=topic_id,
+)
 
                             await db.log_broadcast(
                                 owner_id, acc["phone"], acc_num,
@@ -245,7 +250,12 @@ async def _process_account(owner_id: int, acc_num: int, acc: dict) -> dict:
                         except FloodWait as e:
                             await asyncio.sleep(min(e.value, 30))
                             try:
-                                await forward_saved_to_topic(client, chat_id, saved_msg_id, topic_id)
+                                await client.copy_message(
+    chat_id=chat_id,
+    from_chat_id="self",
+    message_id=saved_msg_id,
+    message_thread_id=topic_id,
+)
 
                                 await db.log_broadcast(
                                     owner_id, acc["phone"], acc_num,
