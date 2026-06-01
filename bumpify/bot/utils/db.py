@@ -1,44 +1,36 @@
+import certifi
 from motor.motor_asyncio import AsyncIOMotorClient
 from bot.config import MONGODB_URL, DATABASE_NAME
-import datetime
 
-mongo_client = None
-mongo_db = None
+_client = None
+_db = None
 
 
 def get_db():
-    return mongo_db
+    return _db
 
 
 async def connect():
-    global mongo_client, mongo_db
-    mongo_client = AsyncIOMotorClient(
+    global _client, _db
+
+    _client = AsyncIOMotorClient(
         MONGODB_URL,
-        maxPoolSize=50,
-        minPoolSize=5,
-        serverSelectionTimeoutMS=10_000,
-        connectTimeoutMS=10_000,
-        socketTimeoutMS=30_000,
-    )
-    mongo_db = mongo_client[DATABASE_NAME]
-    await mongo_db.users.create_index("user_id", unique=True)
-    await mongo_db.accounts.create_index([("owner_id", 1), ("phone", 1)])
-    await mongo_db.accounts.create_index([("owner_id", 1), ("active", 1)])
-    await mongo_db.broadcast_logs.create_index([("owner_id", 1), ("created_at", -1)])
-    await mongo_db.broadcast_logs.create_index([("owner_id", 1), ("success", 1)])
-    await mongo_db.broadcast_logs.create_index([("owner_id", 1), ("account_phone", 1)])
-    await mongo_db.logger_started.create_index("user_id", unique=True)
-    await mongo_db.pending_sessions.create_index(
-        [("owner_id", 1), ("phone", 1)], unique=True
-    )
-    await mongo_db.pending_sessions.create_index(
-        "created_at", expireAfterSeconds=300
+        tls=True,
+        tlsCAFile=certifi.where(),
+        serverSelectionTimeoutMS=30000,
     )
 
+    _db = _client[DATABASE_NAME]
+
+    await _db.users.create_index("user_id", unique=True)
+    await _db.accounts.create_index([("owner_id", 1), ("phone", 1)])
+    await _db.broadcast_logs.create_index("owner_id")
+    await _db.broadcast_logs.create_index([("owner_id", 1), ("_id", -1)])
+    await _db.logger_started.create_index("user_id", unique=True)
 
 async def close():
-    if mongo_client:
-        mongo_client.close()
+    if _client:
+        _client.close()
 
 
 async def get_user(user_id: int) -> dict | None:
@@ -49,11 +41,6 @@ async def upsert_user(user_id: int, data: dict):
     await get_db().users.update_one(
         {"user_id": user_id}, {"$set": data}, upsert=True
     )
-
-
-async def get_all_users() -> list:
-    cursor = get_db().users.find({}, {"user_id": 1, "_id": 0})
-    return await cursor.to_list(length=None)
 
 
 async def set_ad_message_data(user_id: int, data: dict):
@@ -210,7 +197,6 @@ async def log_broadcast(owner_id: int, account_phone: str, account_num: int,
         "group_username": group_username,
         "success": success,
         "error": error,
-        "created_at": datetime.datetime.utcnow(),
     })
 
 
@@ -240,30 +226,13 @@ async def get_recent_broadcast_logs(owner_id: int, limit: int = 30) -> list:
     cursor = get_db().broadcast_logs.find(
         {"owner_id": owner_id},
         {"_id": 0, "owner_id": 0},
-    ).sort("created_at", -1).limit(limit)
+    ).sort("_id", -1).limit(limit)
     return await cursor.to_list(length=None)
 
-
-async def save_pending_session(owner_id: int, phone: str, phone_code_hash: str):
-    await get_db().pending_sessions.update_one(
-        {"owner_id": owner_id, "phone": phone},
-        {"$set": {
-            "owner_id": owner_id,
-            "phone": phone,
-            "phone_code_hash": phone_code_hash,
-            "created_at": datetime.datetime.utcnow(),
-        }},
-        upsert=True,
-    )
+async def set_forum_targets(user_id: int, targets: list[dict]):
+    await upsert_user(user_id, {"forum_targets": targets})
 
 
-async def get_pending_session(owner_id: int, phone: str) -> dict | None:
-    return await get_db().pending_sessions.find_one(
-        {"owner_id": owner_id, "phone": phone}
-    )
-
-
-async def delete_pending_session(owner_id: int, phone: str):
-    await get_db().pending_sessions.delete_one(
-        {"owner_id": owner_id, "phone": phone}
-    )
+async def get_forum_targets(user_id: int) -> list[dict]:
+    user = await get_user(user_id)
+    return user.get("forum_targets", []) if user else []
