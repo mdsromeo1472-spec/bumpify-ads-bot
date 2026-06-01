@@ -76,10 +76,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await howto_handler(update, context)
 
         elif data == "home":
-            await home_handler(update, context)
+            await _home_handler(update, context)
 
         elif data == "add_account":
-            await add_account_fallback(update, context)
+            await _add_account_fallback(update, context)
 
         elif data == "auto_reply":
             from bot.handlers.auto_reply import auto_reply_handler
@@ -92,28 +92,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "set_auto_reply_text":
             from bot.handlers.auto_reply import set_auto_reply_text_handler
             await set_auto_reply_text_handler(update, context)
-
-        elif data == "leave_groups":
-            from bot.handlers.leave_groups import leave_groups_menu_handler
-            await leave_groups_menu_handler(update, context)
-
-        elif data.startswith("leave_account_"):
-            phone = data[len("leave_account_"):]
-            from bot.handlers.leave_groups import leave_account_menu_handler
-            await leave_account_menu_handler(update, context, phone)
-
-        elif data == "start_leave_all":
-            from bot.handlers.leave_groups import start_leave_all_handler
-            await start_leave_all_handler(update, context)
-
-        elif data.startswith("start_leave_"):
-            phone = data[len("start_leave_"):]
-            from bot.handlers.leave_groups import start_leave_phone_handler
-            await start_leave_phone_handler(update, context, phone)
-
-        elif data == "stop_leave":
-            from bot.handlers.leave_groups import stop_leave_handler
-            await stop_leave_handler(update, context)
 
         else:
             logger.warning("Unhandled callback: %s", data)
@@ -132,7 +110,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
 
-async def home_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def _home_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     caption = START_CAPTION
     if LOGGER_BOT_USERNAME:
@@ -151,7 +129,7 @@ async def home_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await safe_edit(query, caption, reply_markup=keyboard, parse_mode="HTML", context=context)
 
 
-async def add_account_fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def _add_account_fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if WEB_APP_URL:
         keyboard = InlineKeyboardMarkup([

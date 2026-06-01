@@ -4,20 +4,20 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, WebAppI
 from telegram.ext import ContextTypes
 from bot.utils import db
 from bot.utils.helpers import safe_edit
-from bot.utils.broadcaster import start_broadcast, stop_broadcast, send_ad_via_pyrogram
+from bot.utils.broadcaster import start_broadcast, stop_broadcast, _send_ad_via_pyrogram
 from bot.utils.session_manager import get_pyrogram_client
 from bot.config import WEB_APP_URL, LOGGER_BOT_TOKEN, LOGGER_BOT_USERNAME
 
 logger = logging.getLogger(__name__)
 
 
-async def save_ad_to_saved_messages(owner_id: int, ad_data: dict):
+async def _save_ad_to_saved_messages(owner_id: int, ad_data: dict):
     accounts = await db.get_accounts(owner_id)
     for acc in accounts:
         try:
             client = await get_pyrogram_client(acc["session"])
             async with client:
-                await send_ad_via_pyrogram(client, "me", ad_data)
+                await _send_ad_via_pyrogram(client, "me", ad_data)
         except Exception as e:
             logger.warning("save_to_saved_messages failed [%s]: %s", acc["phone"], e)
 
@@ -74,7 +74,7 @@ async def handle_ad_message(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return True
 
     await db.set_ad_message_data(user_id, {"set": True})
-    asyncio.create_task(save_ad_to_saved_messages(user_id, ad_data))
+    asyncio.create_task(_save_ad_to_saved_messages(user_id, ad_data))
 
     try:
         await msg.delete()
@@ -84,7 +84,7 @@ async def handle_ad_message(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     prompt = await db.get_prompt_message(user_id)
     if prompt:
         chat_id, msg_id = prompt
-        text, keyboard = await build_dashboard_content_local(user_id)
+        text, keyboard = await _build_dashboard_content_local(user_id)
         for method in ("edit_message_caption", "edit_message_text"):
             try:
                 fn = getattr(context.bot, method)
@@ -108,9 +108,9 @@ async def handle_ad_message(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     return True
 
 
-async def build_dashboard_content_local(user_id: int):
-    from bot.handlers.dashboard import build_dashboard_content
-    return await build_dashboard_content(user_id)
+async def _build_dashboard_content_local(user_id: int):
+    from bot.handlers.dashboard import _build_dashboard_content
+    return await _build_dashboard_content(user_id)
 
 
 async def remove_ad_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
