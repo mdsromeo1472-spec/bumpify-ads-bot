@@ -140,7 +140,7 @@ async def main():
     logging.info("MongoDB connected")
 
     main_app = build_main_app()
-    web_runner = await run_web()
+    web_runner = await run_web(main_app)
 
     await run_bot(main_app)
 
