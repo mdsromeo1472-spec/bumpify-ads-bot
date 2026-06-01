@@ -13,10 +13,10 @@ async def logger_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     main_username = ""
     try:
-        async with telegram.Bot(token=BOT_TOKEN) as main_bot:
-            info = await main_bot.get_me()
-            if info.username:
-                main_username = f"@{info.username}"
+        main_bot = telegram.Bot(token=BOT_TOKEN)
+        info = await main_bot.get_me()
+        if info.username:
+            main_username = f"@{info.username}"
     except Exception as e:
         logger.warning("Could not fetch main bot info: %s", e)
 
@@ -37,6 +37,6 @@ async def logger_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def build_logger_app() -> Application:
-    app = Application.builder().token(LOGGER_BOT_TOKEN).updater(None).build()
+    app = Application.builder().token(LOGGER_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", logger_start))
     return app
