@@ -36,6 +36,6 @@ DATABASE_NAME = "bumpify"
 
 PRIVATE_MODE = os.getenv("PRIVATE_MODE", "false").lower() in ("1", "true", "yes")
 
-raw_owners = os.getenv("OWNER_IDS", os.getenv("OWNER_ID", ""))
-OWNER_IDS: list[int] = [int(x.strip()) for x in raw_owners.split(",") if x.strip().lstrip("-").isdigit()]
+_raw_owners = os.getenv("OWNER_IDS", os.getenv("OWNER_ID", ""))
+OWNER_IDS: list[int] = [int(x.strip()) for x in _raw_owners.split(",") if x.strip().lstrip("-").isdigit()]
 OWNER_ID = OWNER_IDS[0] if OWNER_IDS else 0
